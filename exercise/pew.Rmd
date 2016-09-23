@@ -1,0 +1,107 @@
+---
+title: Pew Example
+author: Joe Sutherland (jls2316)
+date: Feb 4, 2016
+fontsize: 12pt
+geometry: margin=1in
+header-includes:
+  - \usepackage{mathptmx}
+  - \usepackage{microtype}
+indent: true
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Pew 2008
+
+```{r, eval = T, echo = FALSE, include = FALSE}
+
+## Load data.
+pew <- foreign::read.dta('http://www.stat.columbia.edu/~gelman/surveys.course/pew_research_center_june_elect_wknd_data.dta')
+head(pew)
+vote <- read.csv('http://www.stat.columbia.edu/~gelman/surveys.course/2008ElectionResult.csv')
+head(vote)
+
+## Code ideology.
+levels(pew$ideo)
+pew$ideo3 <- as.character(pew$ideo)
+pew$ideo3[pew$ideo3 == 'very liberal'] <- -1
+pew$ideo3[pew$ideo3 == 'liberal'] <- -1
+pew$ideo3[pew$ideo3 == 'moderate'] <- 0
+pew$ideo3[pew$ideo3 == 'conservative'] <- 1
+pew$ideo3[pew$ideo3 == 'very conservative'] <- 1
+pew$ideo3[pew$ideo3 == 'missing/not asked'] <- 0
+pew$ideo3[pew$ideo3 == 'dk/refused'] <- 0
+pew$ideo3 <- as.numeric(pew$ideo3)
+pew$ideo3[is.na(pew$ideo3)] <- 0
+
+## Create new data set.
+ideo <- data.frame(ideo=pew$ideo3, state=tolower(pew$state))
+ideo$abb <- unlist(sapply(ideo$state, function(x){
+    if(x == 'washington dc') return('DC')
+    else return(state.abb[tolower(state.name)==x])
+}))
+vote$state <- tolower(vote$state)
+vote <- vote[,c(1,3)]
+vote$vote_Obama_pct <-vote$vote_Obama_pct / 100
+ideo <- merge(ideo, vote)
+
+## Estimate proportion liberal.
+library(dplyr)
+ideo <- ideo %>% group_by(abb)
+est <- ideo %>% summarize(name = state[1],
+                          liberal = mean(ideo == -1),
+                          conservative = mean(ideo == 1),
+                          moderate = mean(ideo == 0),
+                          check = liberal + conservative + moderate,
+                          obama = vote_Obama_pct[1],
+                          N = n())
+est <- filter(est, abb != 'HI', abb != 'AK')
+table(est$check==1)
+
+```
+
+```{r, eval = T, echo = FALSE, fig.height = 10}
+
+## Plots.
+library(ggplot2)
+library(gridExtra)
+library(scales)
+
+t1<-theme(
+  plot.background = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  axis.line = element_line(size=.4),
+  axis.title.x = element_text(face="bold", color="black", size=10),
+  axis.title.y = element_text(face="bold", color="black", size=10),
+  plot.title = element_text(face="bold", color = "black", size=12),
+  plot.margin = unit(c(2, 2, 2, 2), 'lines')
+)
+
+p1 <- ggplot(est, aes(x = est$liberal, y = est$obama, label = est$abb)) +
+    geom_point() +
+    labs(x="Liberal Ideology (%)", y="Obama Vote Share (%)") +
+    ggtitle("State Liberalness Predicts Vote Share for Obama") +
+    geom_text(check_overlap = TRUE, hjust = 1.4, size=3) +
+    scale_x_continuous(breaks=pretty_breaks(10)) +
+    scale_y_continuous(breaks=pretty_breaks(10)) +
+    t1
+
+p2 <- ggplot(est, aes(x = est$liberal, y = est$N, label = est$abb)) +
+    geom_point() +
+    labs(x="Liberal Ideology (%)", y="Sample Size") +
+    ggtitle("State Liberalness and Sample Size Unrelated") +
+    geom_text(check_overlap = TRUE, hjust = 1.4, size=3) +
+    scale_x_continuous(breaks=pretty_breaks(10)) +
+    scale_y_continuous(breaks=pretty_breaks(10)) +
+    t1
+
+grid.arrange(p1, p2, ncol=1)
+
+```

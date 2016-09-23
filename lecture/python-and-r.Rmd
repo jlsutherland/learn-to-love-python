@@ -1,0 +1,35 @@
+---
+title: Pew Example
+author: Joe Sutherland (jls2316)
+date: Feb 4, 2016
+fontsize: 12pt
+geometry: margin=1in
+header-includes:
+  - \usepackage{mathptmx}
+  - \usepackage{microtype}
+indent: true
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Pew 2008
+
+```{r, eval = T, echo = TRUE, include = FALSE}
+
+## Load data.
+hi <- c(1, 2, 3)
+for (i in 1:len(hi)){
+    print(hi[i])
+}
+
+```
+
+```{python, eval = T, echo = TRUE}
+hi = [1, 2, 3]
+for number in hi:
+    print(number)
+
+```
